@@ -64,10 +64,24 @@ export default function ToolWindow({
   isVisible,
   onClose,
 }: ToolWindowProps) {
-  // Start position: right edge of screen (use safe default for SSR)
-  const [position, setPosition] = useState({
-    x: typeof window !== "undefined" ? window.innerWidth - 520 : 100,
-    y: 50,
+  // Calculate initial position (lazy to avoid SSR issues)
+  const [position, setPosition] = useState(() => {
+    if (typeof window === "undefined") {
+      return { x: 10, y: 50 };
+    }
+    const isMobile = window.innerWidth < 768 || "ontouchstart" in window;
+    if (isMobile) {
+      const menuWidth = Math.min(520, window.innerWidth - 20);
+      return {
+        x: Math.max(10, (window.innerWidth - menuWidth) / 2),
+        y: 60,
+      };
+    } else {
+      return {
+        x: Math.max(10, window.innerWidth - 530),
+        y: 50,
+      };
+    }
   });
   const [isDragging, setIsDragging] = useState(false);
   const [activeTab, setActiveTab] = useState<"tools" | BuildingCategory>(

@@ -1718,7 +1718,7 @@ export default function GameBoard() {
           <div
             style={{
               position: "absolute",
-              bottom: 16,
+              bottom: 100,
               left: "50%",
               transform: "translateX(-50%)",
               zIndex: 2000,
