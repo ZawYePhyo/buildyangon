@@ -809,6 +809,40 @@ export const BUILDINGS: Record<string, BuildingDefinition> = {
     icon: "🏢",
     supportsRotation: true,
   },
+  "promptlayer-office": {
+    id: "promptlayer-office",
+    name: "PromptLayer Office",
+    category: "commercial",
+    footprint: { width: 2, height: 2 },
+    sprites: {
+      south: "/Building/2x2promptlayer_office_south.png",
+      north: "/Building/2x2promptlayer_office_north.png",
+      east: "/Building/2x2promptlayer_office_east.png",
+      west: "/Building/2x2promptlayer_office_west.png",
+    },
+    icon: "🏢",
+    supportsRotation: true,
+  },
+  "general-intelligence-office": {
+    id: "general-intelligence-office",
+    name: "General Intelligence Office",
+    category: "commercial",
+    footprint: { width: 3, height: 4 },
+    footprintByOrientation: {
+      south: { width: 4, height: 3 },
+      north: { width: 4, height: 3 },
+      east: { width: 3, height: 4 },
+      west: { width: 3, height: 4 },
+    },
+    sprites: {
+      south: "/Building/4x3general_intelligence_office_south.png",
+      north: "/Building/4x3general_intelligence_office_north.png",
+      east: "/Building/3x4general_intelligence_office_east.png",
+      west: "/Building/3x4general_intelligence_office_west.png",
+    },
+    icon: "🏢",
+    supportsRotation: true,
+  },
   // New civic/landmark buildings
   "private-school": {
     id: "private-school",
