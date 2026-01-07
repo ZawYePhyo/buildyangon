@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GLB to Isometric Sprite Converter</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      min-height: 100vh;
+      color: #fff;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 10px;
+      font-size: 2.5rem;
+      background: linear-gradient(90deg, #00d9ff, #00ff88);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #888;
+      margin-bottom: 30px;
+    }
+
+    .main-layout {
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      gap: 20px;
+    }
+
+    .drop-zone {
+      background: rgba(255, 255, 255, 0.05);
+      border: 2px dashed rgba(255, 255, 255, 0.3);
+      border-radius: 16px;
+      padding: 60px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+    }
+
+    .drop-zone:hover,
+    .drop-zone.dragover {
+      border-color: #00d9ff;
+      background: rgba(0, 217, 255, 0.1);
+    }
+
+    .drop-zone.has-model {
+      padding: 20px;
+    }
+
+    .drop-icon {
+      font-size: 4rem;
+      margin-bottom: 20px;
+      opacity: 0.5;
+    }
+
+    .drop-text {
+      font-size: 1.2rem;
+      color: #aaa;
+    }
+
+    .drop-hint {
+      font-size: 0.9rem;
+      color: #666;
+      margin-top: 10px;
+    }
+
+    #file-input {
+      display: none;
+    }
+
+    .sidebar {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 16px;
+      padding: 20px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: #ccc;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.3);
+      color: #fff;
+      font-size: 1rem;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: #00d9ff;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #00d9ff, #00ff88);
+      color: #000;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(0, 217, 255, 0.3);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .preview-section {
+      margin-top: 30px;
+    }
+
+    .preview-section h2 {
+      margin-bottom: 15px;
+      font-size: 1.3rem;
+    }
+
+    .preview-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 15px;
+    }
+
+    .preview-card {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 12px;
+      overflow: hidden;
+      text-align: center;
+    }
+
+    .preview-card canvas {
+      display: none;
+    }
+
+    .preview-card img {
+      width: 100%;
+      aspect-ratio: 1;
+      background: repeating-conic-gradient(#333 0% 25%, #444 0% 50%) 50% / 20px 20px;
+      object-fit: contain;
+      cursor: pointer;
+    }
+
+    .preview-card .label {
+      padding: 8px;
+      font-weight: 500;
+      text-transform: capitalize;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .preview-card .save-btn {
+      display: block;
+      width: 100%;
+      padding: 8px;
+      background: rgba(0, 217, 255, 0.2);
+      border: none;
+      color: #00d9ff;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .preview-card .save-btn:hover {
+      background: rgba(0, 217, 255, 0.4);
+    }
+
+    .save-hint {
+      text-align: center;
+      color: #888;
+      font-size: 0.85rem;
+      margin-top: 10px;
+    }
+
+    .model-info {
+      margin-top: 20px;
+      padding: 15px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+      font-size: 0.9rem;
+    }
+
+    .model-info p {
+      margin-bottom: 5px;
+      color: #aaa;
+    }
+
+    .model-info span {
+      color: #00d9ff;
+    }
+
+    .loading {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .loading.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 3px solid rgba(255, 255, 255, 0.1);
+      border-top-color: #00d9ff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .specs-info {
+      margin-top: 20px;
+      padding: 15px;
+      background: rgba(0, 150, 255, 0.1);
+      border: 1px solid rgba(0, 150, 255, 0.3);
+      border-radius: 8px;
+      font-size: 0.85rem;
+    }
+
+    .specs-info h4 {
+      margin-bottom: 10px;
+      color: #00d9ff;
+    }
+
+    .specs-info ul {
+      list-style: none;
+      color: #aaa;
+    }
+
+    .specs-info li {
+      margin-bottom: 5px;
+    }
+
+    .hidden-canvas {
+      position: absolute;
+      left: -9999px;
+      top: -9999px;
+    }
+
+    @media (max-width: 900px) {
+      .main-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .preview-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>🎮 GLB to Isometric Sprite</h1>
+    <p class="subtitle">Convert 3D models to isometric sprites for Pogicity</p>
+
+    <div class="main-layout">
+      <div class="left-panel">
+        <div class="drop-zone" id="dropZone">
+          <div class="drop-icon">📦</div>
+          <div class="drop-text">Drag & Drop GLB file here</div>
+          <div class="drop-hint">or click to browse</div>
+          <input type="file" id="file-input" accept=".glb,.gltf">
+        </div>
+
+        <div class="preview-section" id="previewSection" style="display: none;">
+          <h2>Preview <span style="font-size: 0.8rem; color: #888;">(Right-click image → Save Image As)</span></h2>
+          <div class="preview-grid">
+            <div class="preview-card">
+              <canvas id="preview-south" width="256" height="256"></canvas>
+              <img id="img-south" alt="South view" />
+              <div class="label">South</div>
+              <button class="save-btn" data-direction="south">💾 Save South</button>
+            </div>
+            <div class="preview-card">
+              <canvas id="preview-west" width="256" height="256"></canvas>
+              <img id="img-west" alt="West view" />
+              <div class="label">West</div>
+              <button class="save-btn" data-direction="west">💾 Save West</button>
+            </div>
+            <div class="preview-card">
+              <canvas id="preview-north" width="256" height="256"></canvas>
+              <img id="img-north" alt="North view" />
+              <div class="label">North</div>
+              <button class="save-btn" data-direction="north">💾 Save North</button>
+            </div>
+            <div class="preview-card">
+              <canvas id="preview-east" width="256" height="256"></canvas>
+              <img id="img-east" alt="East view" />
+              <div class="label">East</div>
+              <button class="save-btn" data-direction="east">💾 Save East</button>
+            </div>
+          </div>
+          <p class="save-hint">💡 Tip: Right-click any image and choose "Save Image As..." for reliable saving</p>
+        </div>
+      </div>
+
+      <div class="sidebar">
+        <div class="form-group">
+          <label>Building Name</label>
+          <input type="text" id="buildingName" placeholder="my-shop" value="">
+        </div>
+
+        <div class="form-group">
+          <label>Footprint (tiles)</label>
+          <div class="form-row">
+            <input type="number" id="footprintWidth" placeholder="Width" value="2" min="1" max="10">
+            <input type="number" id="footprintHeight" placeholder="Height" value="2" min="1" max="10">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Canvas Size (px)</label>
+          <input type="number" id="canvasSize" value="512" min="256" max="2048" step="256">
+        </div>
+
+        <button class="btn btn-primary" id="downloadBtn" disabled>
+          ⬇️ Download All Sprites
+        </button>
+
+        <div class="model-info" id="modelInfo" style="display: none;">
+          <p>File: <span id="fileName">-</span></p>
+          <p>Size: <span id="fileSize">-</span></p>
+        </div>
+
+        <div class="specs-info">
+          <h4>📐 Output Specs</h4>
+          <ul>
+            <li>• 44x22px per tile (2:1 isometric)</li>
+            <li>• Anchor at bottom-center</li>
+            <li>• PNG with transparency</li>
+            <li>• 4 directions (S, W, N, E)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+  </div>
+
+  <!-- Hidden render canvas -->
+  <canvas id="renderCanvas" class="hidden-canvas"></canvas>
+
+  <script>
+    // State
+    let currentModel = null;
+    let scene, camera, renderer;
+    let modelBoundingBox = null;
+
+    // DOM Elements
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('file-input');
+    const previewSection = document.getElementById('previewSection');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const modelInfo = document.getElementById('modelInfo');
+    const loading = document.getElementById('loading');
+    const renderCanvas = document.getElementById('renderCanvas');
+
+    // Directions with rotation angles (in radians)
+    const DIRECTIONS = {
+      south: 0,
+      west: Math.PI / 2,
+      north: Math.PI,
+      east: Math.PI * 1.5
+    };
+
+    // Initialize Three.js
+    function initThree() {
+      scene = new THREE.Scene();
+      scene.background = null; // Transparent
+
+      // Orthographic camera for isometric view
+      camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 1000);
+
+      renderer = new THREE.WebGLRenderer({
+        canvas: renderCanvas,
+        alpha: true,
+        antialias: true,
+        preserveDrawingBuffer: true
+      });
+      renderer.setClearColor(0x000000, 0);
+
+      // Add ambient light
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+      scene.add(ambientLight);
+
+      // Add directional light (sun-like)
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      directionalLight.position.set(5, 10, 5);
+      scene.add(directionalLight);
+
+      // Add secondary fill light
+      const fillLight = new THREE.DirectionalLight(0xffffff, 0.3);
+      fillLight.position.set(-5, 5, -5);
+      scene.add(fillLight);
+    }
+
+    // Load GLB file
+    function loadGLB(file) {
+      showLoading(true);
+
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const arrayBuffer = e.target.result;
+        const loader = new THREE.GLTFLoader();
+
+        loader.parse(arrayBuffer, '', function (gltf) {
+          // Remove previous model
+          if (currentModel) {
+            scene.remove(currentModel);
+          }
+
+          currentModel = gltf.scene;
+          scene.add(currentModel);
+
+          // Calculate bounding box
+          const box = new THREE.Box3().setFromObject(currentModel);
+          modelBoundingBox = box;
+
+          // Center the model
+          const center = box.getCenter(new THREE.Vector3());
+          currentModel.position.sub(center);
+
+          // Update UI
+          document.getElementById('fileName').textContent = file.name;
+          document.getElementById('fileSize').textContent = formatFileSize(file.size);
+          modelInfo.style.display = 'block';
+          previewSection.style.display = 'block';
+          downloadBtn.disabled = false;
+
+          // Auto-set building name from filename
+          const baseName = file.name.replace(/\.(glb|gltf)$/i, '').toLowerCase().replace(/\s+/g, '-');
+          document.getElementById('buildingName').value = baseName;
+
+          // Render previews
+          renderAllPreviews();
+          showLoading(false);
+
+        }, function (error) {
+          console.error('Error parsing GLB:', error);
+          alert('Failed to load GLB file. Make sure it\'s a valid GLB format.');
+          showLoading(false);
+        });
+      };
+
+      reader.readAsArrayBuffer(file);
+    }
+
+    // Set up isometric camera
+    function setupIsometricCamera(direction) {
+      if (!modelBoundingBox) return;
+
+      const box = modelBoundingBox;
+      const size = box.getSize(new THREE.Vector3());
+      const maxDim = Math.max(size.x, size.y, size.z);
+
+      // Isometric angle: arctan(0.5) ≈ 26.565° for true 2:1 isometric
+      const isoAngle = Math.atan(0.5);
+
+      // Position camera
+      const distance = maxDim * 3;
+      const rotation = DIRECTIONS[direction];
+
+      // Calculate camera position
+      const camX = Math.sin(rotation) * Math.cos(isoAngle) * distance;
+      const camY = Math.sin(isoAngle) * distance;
+      const camZ = Math.cos(rotation) * Math.cos(isoAngle) * distance;
+
+      camera.position.set(camX, camY, camZ);
+      camera.lookAt(0, 0, 0);
+
+      // Adjust orthographic frustum to fit model
+      const aspect = 1; // Square output
+      const frustumSize = maxDim * 1.5;
+
+      camera.left = -frustumSize * aspect / 2;
+      camera.right = frustumSize * aspect / 2;
+      camera.top = frustumSize / 2;
+      camera.bottom = -frustumSize / 2;
+      camera.updateProjectionMatrix();
+    }
+
+    // Render a single direction
+    function renderDirection(direction, targetCanvas) {
+      const canvasSize = parseInt(document.getElementById('canvasSize').value) || 512;
+
+      renderer.setSize(canvasSize, canvasSize);
+      setupIsometricCamera(direction);
+      renderer.render(scene, camera);
+
+      // Copy to target canvas
+      const ctx = targetCanvas.getContext('2d');
+      targetCanvas.width = canvasSize;
+      targetCanvas.height = canvasSize;
+      ctx.clearRect(0, 0, canvasSize, canvasSize);
+      ctx.drawImage(renderCanvas, 0, 0);
+
+      return targetCanvas.toDataURL('image/png');
+    }
+
+    // Render all previews
+    function renderAllPreviews() {
+      if (!currentModel) return;
+
+      Object.keys(DIRECTIONS).forEach(direction => {
+        const previewCanvas = document.getElementById(`preview-${direction}`);
+        const previewImg = document.getElementById(`img-${direction}`);
+        const dataUrl = renderDirection(direction, previewCanvas);
+
+        // Set img src so user can right-click and save
+        if (previewImg) {
+          previewImg.src = dataUrl;
+        }
+      });
+    }
+
+    // Convert canvas to blob
+    function canvasToBlob(canvas) {
+      return new Promise((resolve) => {
+        canvas.toBlob(resolve, 'image/png');
+      });
+    }
+
+    // Download all sprites using File System Access API
+    async function downloadAllSprites() {
+      if (!currentModel) return;
+
+      showLoading(true);
+
+      const buildingName = document.getElementById('buildingName').value || 'building';
+      const footprintW = document.getElementById('footprintWidth').value || 2;
+      const footprintH = document.getElementById('footprintHeight').value || 2;
+      const canvasSize = parseInt(document.getElementById('canvasSize').value) || 512;
+
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = canvasSize;
+      tempCanvas.height = canvasSize;
+
+      // Download each direction as a separate PNG file
+      const directions = Object.keys(DIRECTIONS);
+
+      for (let i = 0; i < directions.length; i++) {
+        const direction = directions[i];
+
+        // Determine footprint for this direction
+        let w = footprintW;
+        let h = footprintH;
+        if (direction === 'east' || direction === 'west') {
+          // Swap dimensions for rotated views
+          w = footprintH;
+          h = footprintW;
+        }
+
+        const filename = `${w}x${h}${buildingName}_${direction}.png`;
+
+        // Render to temp canvas
+        renderDirection(direction, tempCanvas);
+
+        // Convert to blob
+        const blob = await canvasToBlob(tempCanvas);
+
+        // Try File System Access API first (modern browsers)
+        if (window.showSaveFilePicker) {
+          try {
+            const handle = await window.showSaveFilePicker({
+              suggestedName: filename,
+              types: [{
+                description: 'PNG Image',
+                accept: { 'image/png': ['.png'] }
+              }]
+            });
+            const writable = await handle.createWritable();
+            await writable.write(blob);
+            await writable.close();
+          } catch (err) {
+            if (err.name !== 'AbortError') {
+              console.error('Save failed:', err);
+            }
+            showLoading(false);
+            return; // User cancelled
+          }
+        } else {
+          // Fallback for browsers without File System Access API
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          a.style.display = 'none';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+          // Delay between downloads
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+
+      showLoading(false);
+      alert('All sprites downloaded successfully!');
+    }
+
+    // Utility functions
+    function formatFileSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    function showLoading(show) {
+      loading.classList.toggle('active', show);
+    }
+
+    // Event Listeners
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file && (file.name.endsWith('.glb') || file.name.endsWith('.gltf'))) {
+        loadGLB(file);
+      }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        loadGLB(file);
+      }
+    });
+
+    downloadBtn.addEventListener('click', downloadAllSprites);
+
+    // Re-render previews when settings change
+    ['canvasSize', 'footprintWidth', 'footprintHeight'].forEach(id => {
+      document.getElementById(id).addEventListener('change', renderAllPreviews);
+    });
+
+    // Individual save buttons
+    document.querySelectorAll('.save-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const direction = e.target.dataset.direction;
+        if (!currentModel) return;
+
+        const buildingName = document.getElementById('buildingName').value || 'building';
+        const footprintW = document.getElementById('footprintWidth').value || 2;
+        const footprintH = document.getElementById('footprintHeight').value || 2;
+
+        // Determine footprint for this direction
+        let w = footprintW;
+        let h = footprintH;
+        if (direction === 'east' || direction === 'west') {
+          w = footprintH;
+          h = footprintW;
+        }
+
+        const filename = `${w}x${h}${buildingName}_${direction}.png`;
+        const imgElement = document.getElementById(`img-${direction}`);
+
+        if (imgElement && imgElement.src) {
+          // Try File System Access API
+          if (window.showSaveFilePicker) {
+            try {
+              const handle = await window.showSaveFilePicker({
+                suggestedName: filename,
+                types: [{
+                  description: 'PNG Image',
+                  accept: { 'image/png': ['.png'] }
+                }]
+              });
+
+              // Convert data URL to blob
+              const response = await fetch(imgElement.src);
+              const blob = await response.blob();
+
+              const writable = await handle.createWritable();
+              await writable.write(blob);
+              await writable.close();
+
+              alert(`Saved: ${filename}`);
+            } catch (err) {
+              if (err.name !== 'AbortError') {
+                console.error('Save failed:', err);
+                alert('Save failed. Try right-clicking the image and choosing "Save Image As..."');
+              }
+            }
+          } else {
+            // Fallback - open image in new tab for manual save
+            const win = window.open();
+            win.document.write(`<html><head><title>${filename}</title></head><body style="margin:0;background:#222;display:flex;align-items:center;justify-content:center;min-height:100vh;"><img src="${imgElement.src}" alt="${filename}"/><p style="position:fixed;bottom:10px;left:50%;transform:translateX(-50%);color:white;">Right-click and "Save Image As..." → ${filename}</p></body></html>`);
+          }
+        }
+      });
+    });
+
+    // Initialize
+    initThree();
+  </script>
+</body>
+
+</html>
