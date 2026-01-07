@@ -380,6 +380,22 @@
           <input type="number" id="canvasSize" value="512" min="256" max="2048" step="256">
         </div>
 
+        <div class="form-group">
+          <label>💡 Lighting</label>
+          <div style="margin-bottom: 8px;">
+            <label style="font-size: 0.85rem; color: #888;">Ambient: <span id="ambientValue">1.0</span></label>
+            <input type="range" id="ambientLight" min="0" max="2" step="0.1" value="1.0" style="width: 100%;">
+          </div>
+          <div style="margin-bottom: 8px;">
+            <label style="font-size: 0.85rem; color: #888;">Sun: <span id="directionalValue">1.2</span></label>
+            <input type="range" id="directionalLight" min="0" max="3" step="0.1" value="1.2" style="width: 100%;">
+          </div>
+          <div>
+            <label style="font-size: 0.85rem; color: #888;">Fill: <span id="fillValue">0.6</span></label>
+            <input type="range" id="fillLight" min="0" max="2" step="0.1" value="0.6" style="width: 100%;">
+          </div>
+        </div>
+
         <button class="btn btn-primary" id="downloadBtn" disabled>
           ⬇️ Download All Sprites
         </button>
@@ -413,6 +429,7 @@
     // State
     let currentModel = null;
     let scene, camera, renderer;
+    let ambientLight, directionalLight, fillLight;
     let modelBoundingBox = null;
 
     // DOM Elements
@@ -448,17 +465,17 @@
       });
       renderer.setClearColor(0x000000, 0);
 
-      // Add ambient light
-      const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+      // Add ambient light (brighter default)
+      ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
       scene.add(ambientLight);
 
-      // Add directional light (sun-like)
-      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      // Add directional light (sun-like, brighter)
+      directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
       directionalLight.position.set(5, 10, 5);
       scene.add(directionalLight);
 
-      // Add secondary fill light
-      const fillLight = new THREE.DirectionalLight(0xffffff, 0.3);
+      // Add secondary fill light (brighter)
+      fillLight = new THREE.DirectionalLight(0xffffff, 0.6);
       fillLight.position.set(-5, 5, -5);
       scene.add(fillLight);
     }
@@ -712,6 +729,34 @@
     // Re-render previews when settings change
     ['canvasSize', 'footprintWidth', 'footprintHeight'].forEach(id => {
       document.getElementById(id).addEventListener('change', renderAllPreviews);
+    });
+
+    // Lighting controls
+    document.getElementById('ambientLight').addEventListener('input', (e) => {
+      const value = parseFloat(e.target.value);
+      document.getElementById('ambientValue').textContent = value.toFixed(1);
+      if (ambientLight) {
+        ambientLight.intensity = value;
+        renderAllPreviews();
+      }
+    });
+
+    document.getElementById('directionalLight').addEventListener('input', (e) => {
+      const value = parseFloat(e.target.value);
+      document.getElementById('directionalValue').textContent = value.toFixed(1);
+      if (directionalLight) {
+        directionalLight.intensity = value;
+        renderAllPreviews();
+      }
+    });
+
+    document.getElementById('fillLight').addEventListener('input', (e) => {
+      const value = parseFloat(e.target.value);
+      document.getElementById('fillValue').textContent = value.toFixed(1);
+      if (fillLight) {
+        fillLight.intensity = value;
+        renderAllPreviews();
+      }
     });
 
     // Individual save buttons
