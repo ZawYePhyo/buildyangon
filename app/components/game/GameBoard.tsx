@@ -1170,7 +1170,7 @@ export default function GameBoard() {
             alignItems: "center",
             justifyContent: "center",
             borderRadius: 0,
-            borderTop: "none",
+            borderTopWidth: 0,
             boxShadow: "1px 1px 0px #505050",
             imageRendering: "pixelated",
             transition: "filter 0.1s",
@@ -1224,7 +1224,7 @@ export default function GameBoard() {
             alignItems: "center",
             justifyContent: "center",
             borderRadius: 0,
-            borderTop: "none",
+            borderTopWidth: 0,
             boxShadow: "1px 1px 0px #505050",
             imageRendering: "pixelated",
             transition: "filter 0.1s",
@@ -1277,7 +1277,7 @@ export default function GameBoard() {
             alignItems: "center",
             justifyContent: "center",
             borderRadius: 0, // No rounded corners
-            borderTop: "none", // Remove top border to attach to edge
+            borderTopWidth: 0, // Remove top border to attach to edge
             boxShadow: "1px 1px 0px #244B7A",
             imageRendering: "pixelated",
             transition: "filter 0.1s",
@@ -1330,7 +1330,7 @@ export default function GameBoard() {
             alignItems: "center",
             justifyContent: "center",
             borderRadius: 0, // No rounded corners
-            borderTop: "none", // Remove top border
+            borderTopWidth: 0, // Remove top border
             boxShadow: "1px 1px 0px #244B7A",
             imageRendering: "pixelated",
             transition: "filter 0.1s",
@@ -1415,7 +1415,7 @@ export default function GameBoard() {
             alignItems: "center",
             justifyContent: "center",
             borderRadius: 0,
-            borderTop: "none",
+            borderTopWidth: 0,
             boxShadow: isToolWindowVisible
               ? "inset 1px 1px 0px #2a0a0a"
               : "1px 1px 0px #2a0a0a",
@@ -1488,7 +1488,7 @@ export default function GameBoard() {
             alignItems: "center",
             justifyContent: "center",
             borderRadius: 0,
-            borderTop: "none",
+            borderTopWidth: 0,
             boxShadow:
               selectedTool === ToolType.Eraser
                 ? "inset 1px 1px 0px #2a0a0a"

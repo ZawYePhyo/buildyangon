@@ -396,6 +396,17 @@
           </div>
         </div>
 
+        <div class="form-group">
+          <label>📍 Vertical Offset</label>
+          <div>
+            <label style="font-size: 0.85rem; color: #888;">Offset: <span id="verticalOffsetValue">0</span>px</label>
+            <input type="range" id="verticalOffset" min="-200" max="200" step="10" value="0" style="width: 100%;">
+          </div>
+          <div style="font-size: 0.75rem; color: #666; margin-top: 4px;">
+            Negative = move sprite DOWN (closer to bottom)
+          </div>
+        </div>
+
         <button class="btn btn-primary" id="downloadBtn" disabled>
           ⬇️ Download All Sprites
         </button>
@@ -568,17 +579,19 @@
     // Render a single direction
     function renderDirection(direction, targetCanvas) {
       const canvasSize = parseInt(document.getElementById('canvasSize').value) || 512;
+      const verticalOffset = parseInt(document.getElementById('verticalOffset').value) || 0;
 
       renderer.setSize(canvasSize, canvasSize);
       setupIsometricCamera(direction);
       renderer.render(scene, camera);
 
-      // Copy to target canvas
+      // Copy to target canvas with vertical offset
       const ctx = targetCanvas.getContext('2d');
       targetCanvas.width = canvasSize;
       targetCanvas.height = canvasSize;
       ctx.clearRect(0, 0, canvasSize, canvasSize);
-      ctx.drawImage(renderCanvas, 0, 0);
+      // Vertical offset: positive = move up, negative = move down (sprite appears lower)
+      ctx.drawImage(renderCanvas, 0, verticalOffset);
 
       return targetCanvas.toDataURL('image/png');
     }
@@ -757,6 +770,13 @@
         fillLight.intensity = value;
         renderAllPreviews();
       }
+    });
+
+    // Vertical offset slider
+    document.getElementById('verticalOffset').addEventListener('input', (e) => {
+      const value = parseInt(e.target.value);
+      document.getElementById('verticalOffsetValue').textContent = value;
+      renderAllPreviews();
     });
 
     // Individual save buttons

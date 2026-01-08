@@ -301,6 +301,55 @@ Clean up your renders and ensure consistency:
 - This ensures buildings align correctly with the isometric grid
 - Misaligned sprites will appear to "float" or sink into the ground
 
+### 3D Modeling Guidelines
+
+If you're creating buildings from 3D models (using the GLB Converter or similar tools), follow these guidelines:
+
+#### Base Shape Must Be Rectangular
+Your 3D model's **ground footprint** must fit within a perfect isometric rectangle. The footprint represents which tiles the building occupies.
+
+For irregular buildings (circular, octagonal, L-shaped), **add ground/plaza around them** to create a rectangular base:
+
+```
+       ┌─────────────────┐
+       │   ┌─────────┐   │
+       │   │  ROUND  │   │
+       │   │ BUILDING│   │
+       │   └─────────┘   │
+       │    PLATFORM     │
+       └─────────────────┘
+```
+
+#### Common Footprint Sizes
+
+| Size | Good For |
+|------|----------|
+| 1x1 | Props (trees, benches, lamps) |
+| 2x2 | Small houses, shops |
+| 3x2 or 2x3 | Medium buildings |
+| 4x4 | Large buildings |
+| 6x6 | Landmarks, civic buildings |
+| 8x8+ | Major landmarks |
+
+#### File Naming Convention
+
+```
+{width}x{height}{building-name}_{direction}.png
+
+Examples:
+4x4sule-pagoda_south.png
+2x2coffee-shop_north.png
+6x6city-hall_east.png
+```
+
+#### GLB Converter Settings (localhost:3001/glb-converter.html)
+
+1. Set footprint size to match your model's base
+2. Keep **Canvas Size = 512** (always)
+3. Use **Vertical Offset slider** to align the front corner to the bottom-center
+4. Adjust **Lighting** to match existing assets
+5. Export all 4 directions
+
 ---
 
 ## Asset Usage

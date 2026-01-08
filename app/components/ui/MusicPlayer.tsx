@@ -1,10 +1,49 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { playClickSound, playDoubleClickSound } from "@/app/utils/sounds";
 
+// Declare YouTube IFrame API types
+declare global {
+  interface Window {
+    YT: {
+      Player: new (elementId: string, config: YouTubePlayerConfig) => YouTubePlayer;
+      PlayerState: {
+        PLAYING: number;
+        PAUSED: number;
+        ENDED: number;
+      };
+    };
+    onYouTubeIframeAPIReady: () => void;
+  }
+}
+
+interface YouTubePlayerConfig {
+  height: string;
+  width: string;
+  videoId: string;
+  playerVars?: {
+    autoplay?: number;
+    controls?: number;
+    loop?: number;
+    playlist?: string;
+  };
+  events?: {
+    onReady?: (event: { target: YouTubePlayer }) => void;
+    onStateChange?: (event: { data: number }) => void;
+  };
+}
+
+interface YouTubePlayer {
+  playVideo: () => void;
+  pauseVideo: () => void;
+  setVolume: (volume: number) => void;
+  destroy: () => void;
+  getPlayerState: () => number;
+}
+
 // Music genres and their tracks
-type MusicGenre = "chill" | "jazz";
+type MusicGenre = "chill" | "jazz" | "burmese-lofi";
 
 const MUSIC_PLAYLISTS: Record<MusicGenre, string[]> = {
   chill: [
@@ -21,7 +60,11 @@ const MUSIC_PLAYLISTS: Record<MusicGenre, string[]> = {
     "pogicity_music_006.mp3",
     "pogicity_music_007.mp3",
   ],
+  "burmese-lofi": [], // YouTube-based, no local tracks
 };
+
+// YouTube video ID for Burmese Lofi
+const YOUTUBE_VIDEO_ID = "QBU1VVd9qO4";
 
 // Gray color scheme for music player
 const GRAY_COLORS = {
@@ -37,35 +80,100 @@ export default function MusicPlayer() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentGenre, setCurrentGenre] = useState<MusicGenre>("chill");
   const [currentTrack, setCurrentTrack] = useState(0);
+  const [ytReady, setYtReady] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const ytPlayerRef = useRef<YouTubePlayer | null>(null);
+  const ytContainerRef = useRef<HTMLDivElement | null>(null);
 
   const currentPlaylist = MUSIC_PLAYLISTS[currentGenre];
-  const getTrackPath = (genre: MusicGenre, index: number) => 
+  const getTrackPath = (genre: MusicGenre, index: number) =>
     `/audio/music/${genre}/${MUSIC_PLAYLISTS[genre][index]}`;
 
   const nextTrack = () => {
+    if (currentGenre === "burmese-lofi") return; // No tracks for YouTube
     setCurrentTrack((prev) => (prev + 1) % currentPlaylist.length);
     playClickSound();
   };
 
   const prevTrack = () => {
+    if (currentGenre === "burmese-lofi") return; // No tracks for YouTube
     setCurrentTrack((prev) => (prev - 1 + currentPlaylist.length) % currentPlaylist.length);
     playClickSound();
   };
 
-  const togglePlay = () => {
-    if (!audioRef.current) return;
-
-    if (isPlaying) {
-      audioRef.current.pause();
+  const togglePlay = useCallback(() => {
+    if (currentGenre === "burmese-lofi") {
+      // Toggle YouTube player
+      if (ytPlayerRef.current && ytReady && typeof ytPlayerRef.current.playVideo === "function") {
+        if (isPlaying) {
+          ytPlayerRef.current.pauseVideo();
+        } else {
+          ytPlayerRef.current.playVideo();
+        }
+        setIsPlaying(!isPlaying);
+      }
     } else {
-      audioRef.current.play().catch(() => {});
+      // Toggle local audio
+      if (!audioRef.current) return;
+      if (isPlaying) {
+        audioRef.current.pause();
+      } else {
+        audioRef.current.play().catch(() => { });
+      }
+      setIsPlaying(!isPlaying);
     }
-    setIsPlaying(!isPlaying);
     playClickSound();
-  };
+  }, [currentGenre, isPlaying, ytReady]);
 
+  // Initialize YouTube IFrame API
   useEffect(() => {
+    if (typeof window !== "undefined" && !window.YT) {
+      const tag = document.createElement("script");
+      tag.src = "https://www.youtube.com/iframe_api";
+      const firstScriptTag = document.getElementsByTagName("script")[0];
+      firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
+
+      window.onYouTubeIframeAPIReady = () => {
+        setYtReady(true);
+      };
+    } else if (window.YT) {
+      setYtReady(true);
+    }
+  }, []);
+
+  // Create YouTube player when API is ready and genre is burmese-lofi
+  useEffect(() => {
+    if (ytReady && currentGenre === "burmese-lofi" && !ytPlayerRef.current) {
+      ytPlayerRef.current = new window.YT.Player("youtube-player", {
+        height: "1",
+        width: "1",
+        videoId: YOUTUBE_VIDEO_ID,
+        playerVars: {
+          autoplay: 0,
+          controls: 0,
+          loop: 1,
+          playlist: YOUTUBE_VIDEO_ID, // Required for loop
+        },
+        events: {
+          onReady: (event) => {
+            event.target.setVolume(30); // 30% volume
+          },
+          onStateChange: (event) => {
+            if (event.data === window.YT.PlayerState.PLAYING) {
+              setIsPlaying(true);
+            } else if (event.data === window.YT.PlayerState.PAUSED) {
+              setIsPlaying(false);
+            }
+          },
+        },
+      });
+    }
+  }, [ytReady, currentGenre]);
+
+  // Handle local audio for non-YouTube genres
+  useEffect(() => {
+    if (currentGenre === "burmese-lofi") return; // Skip for YouTube
+
     // Create audio element
     if (!audioRef.current) {
       audioRef.current = new Audio(getTrackPath(currentGenre, currentTrack));
@@ -74,16 +182,16 @@ export default function MusicPlayer() {
 
     // Update audio source when track or genre changes
     audioRef.current.src = getTrackPath(currentGenre, currentTrack);
-    
+
     // Auto-play next track when current ends
     const handleEnded = () => {
       setCurrentTrack((prev) => (prev + 1) % currentPlaylist.length);
     };
-    
+
     audioRef.current.addEventListener("ended", handleEnded);
-    
+
     if (isPlaying) {
-      audioRef.current.play().catch(() => {});
+      audioRef.current.play().catch(() => { });
     }
 
     return () => {
@@ -94,15 +202,26 @@ export default function MusicPlayer() {
   }, [currentTrack, currentGenre, currentPlaylist.length, isPlaying]);
 
   const switchGenre = (genre: MusicGenre) => {
-    if (genre !== currentGenre) {
-      setCurrentGenre(genre);
-      setCurrentTrack(0); // Reset to first track of new genre
-      playDoubleClickSound();
+    if (genre === currentGenre) return;
+
+    // Stop current playback
+    if (currentGenre === "burmese-lofi" && ytPlayerRef.current) {
+      ytPlayerRef.current.pauseVideo();
+    } else if (audioRef.current) {
+      audioRef.current.pause();
     }
+
+    setIsPlaying(false);
+    setCurrentGenre(genre);
+    if (genre !== "burmese-lofi") {
+      setCurrentTrack(0); // Reset to first track for local genres
+    }
+    playDoubleClickSound();
   };
 
   // Get the icon path for current genre
   const getGenreIcon = (genre: MusicGenre) => {
+    if (genre === "burmese-lofi") return "/UI/youtube.png";
     return genre === "chill" ? "/UI/ambient.png" : "/UI/jazz.png";
   };
 
@@ -112,11 +231,13 @@ export default function MusicPlayer() {
     title,
     imgSrc,
     active = false,
+    size = 48,
   }: {
     onClick: () => void;
     title: string;
     imgSrc: string;
     active?: boolean;
+    size?: number;
   }) => (
     <button
       onClick={onClick}
@@ -160,8 +281,8 @@ export default function MusicPlayer() {
         src={imgSrc}
         alt={title}
         style={{
-          width: 48,
-          height: 48,
+          width: size,
+          height: size,
           display: "block",
         }}
       />
@@ -169,7 +290,7 @@ export default function MusicPlayer() {
   );
 
   return (
-    <div 
+    <div
       style={{
         display: "flex",
         alignItems: "center",
@@ -179,10 +300,23 @@ export default function MusicPlayer() {
       }}
       onWheel={(e) => e.stopPropagation()}
     >
+      {/* Hidden YouTube player */}
+      <div
+        id="youtube-player"
+        ref={ytContainerRef}
+        style={{
+          position: "absolute",
+          width: 1,
+          height: 1,
+          opacity: 0,
+          pointerEvents: "none",
+          overflow: "hidden",
+        }}
+      />
       {/* Genre selector button */}
       <div style={{ position: "relative", display: "inline-block" }}>
         <MenuButton
-          onClick={() => {}}
+          onClick={() => { }}
           title="Select Music Genre"
           imgSrc={getGenreIcon(currentGenre)}
         />
@@ -202,6 +336,7 @@ export default function MusicPlayer() {
         >
           <option value="chill">Chill</option>
           <option value="jazz">Jazz</option>
+          <option value="burmese-lofi">Burmese Lofi</option>
         </select>
       </div>
 
@@ -272,7 +407,10 @@ export default function MusicPlayer() {
               textTransform: "uppercase",
             }}
           >
-            {`${currentTrack + 1}. ${currentGenre}_${currentPlaylist[currentTrack]}`.toUpperCase()} • {`${currentTrack + 1}. ${currentGenre}_${currentPlaylist[currentTrack]}`.toUpperCase()}
+            {currentGenre === "burmese-lofi"
+              ? "BURMESE LOFI VOL 1-4 • BURMESE LOFI VOL 1-4"
+              : `${currentTrack + 1}. ${currentGenre}_${currentPlaylist[currentTrack]}`.toUpperCase() + " • " + `${currentTrack + 1}. ${currentGenre}_${currentPlaylist[currentTrack]}`.toUpperCase()
+            }
           </div>
         </div>
       </div>

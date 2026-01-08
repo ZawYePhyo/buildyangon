@@ -1267,6 +1267,20 @@ export const BUILDINGS: Record<string, BuildingDefinition> = {
     icon: "🏬",
     supportsRotation: true,
   },
+  "sule-pagoda": {
+    id: "sule-pagoda",
+    name: "Sule Pagoda",
+    category: "landmark",
+    footprint: { width: 10, height: 10 },
+    sprites: {
+      south: "/Building/landmark/4x4sule-pagoda_south.png",
+      north: "/Building/landmark/4x4sule-pagoda_north.png",
+      east: "/Building/landmark/4x4sule-pagoda_east.png",
+      west: "/Building/landmark/4x4sule-pagoda_west.png",
+    },
+    icon: "🏯",
+    supportsRotation: true,
+  },
 };
 
 // Helper to get building by ID
